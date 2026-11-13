@@ -283,15 +283,15 @@ candle(){
     o.fillStyle=gr; o.fillRect(0,0,R*2,R*2); o.globalCompositeOperation='source-over';
   }
   const WL=C.winLights, lamp=sprite(48,[[0,'rgba(255,236,190,.95)'],[.45,'rgba(255,222,165,.8)'],[.7,'rgba(255,205,140,.35)'],[1,'rgba(255,190,120,0)']]);   // out-of-focus, like the photo's own lights
-  const lit=[]; let step=0, nextEv=WL?rnd(2,3):1e9, gust=0, flick=1;
+  const lit=[]; let step=0, nextEv=WL?1.2:1e9, gust=0, flick=1;
   function lightAt(sp){ const d=rnd(0,1), y=WL.yFar+(WL.yNear-WL.yFar)*d;   // d: 0 = far, 1 = near
     const vx0=Math.max(WL.x0,-ox/s+25);   // only the part of the window that is on screen
     return {x:rnd(vx0,Math.max(vx0+40,WL.x1)), y, r:WL.rFar+(WL.rNear-WL.rFar)*d*d, a:0, on:true, tint:sp}; }
   function event(){ // a light comes on, another one, then one goes out ... 5 events, then again
-    const offStep=step%5===2||step%5===4, onLights=lit.filter(l=>l.on);
+    const onLights=lit.filter(l=>l.on), offStep=(step%5===2||step%5===4)&&onLights.length>=(WL.min||3) || onLights.length>=(WL.max||8);
     if(offStep && onLights.length) onLights[Math.floor(Math.random()*onLights.length)].on=false;
     else lit.push(lightAt(Math.random()<.25?1:0));
-    step++; nextEv=rnd(7,8); }
+    step++; nextEv=WL.every?rnd(WL.every*.85,WL.every*1.15):rnd(7,8); }
   function drawLights(dt){
     if(!WL) return; nextEv-=dt; if(nextEv<=0) event();
     gs.save(); gs.beginPath(); gs.rect(X(WL.clip[0]),Y(WL.clip[1]),(WL.clip[2]-WL.clip[0])*s,(WL.clip[3]-WL.clip[1])*s); gs.clip();
