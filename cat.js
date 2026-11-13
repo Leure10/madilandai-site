@@ -114,12 +114,16 @@ chart(){
   function regime(){ const r=Math.random();
     mu = r<.38 ? rnd(.006,.012) : r<.66 ? -rnd(.005,.011) : rnd(-.002,.002);
     regLeft = Math.round(rnd(6,16)); }
-  function newCandle(){ const o=Math.exp(lp); return {o,c:o,h:o,l:o,v:0}; }
+  function newCandle(){ const o=Math.exp(lp);
+    // volume like a real tape: heavy-tailed from bar to bar, louder when volatility is up and in sell-offs,
+    // now and then a climax bar; it keeps flowing in unevenly while the candle forms
+    const base=Math.exp(.6*gauss())*(.45+.55*Math.min(2.4,vol))*(mu<-.004?1.35:mu>.004?1.1:.8)*(Math.random()<.07?rnd(2.2,3.6):1);
+    return {o,c:o,h:o,l:o,v:0,vt:base}; }
   function walk(dt){ const SIG=.017; if(!(dt>0)) return;
     lp += mu*dt/PER + SIG*vol*Math.sqrt(dt/PER)*gauss();
     const p=Math.exp(lp); cur.c=p; cur.h=Math.max(cur.h,p); cur.l=Math.min(cur.l,p);
-    cur.v += dt/PER*(.35+.65*Math.min(2.2,vol)/2.2)*rnd(.6,1.4); }
-  function close(){ K.push(cur); if(K.length>N) K.shift();
+    cur.v += cur.vt*dt/PER*(Math.random()<.04?rnd(3,8):rnd(.2,1.2)); }
+  function close(){ cur.v += cur.vt*Math.min(2.5,Math.abs(Math.log(cur.c/cur.o))/.017*.9); K.push(cur); if(K.length>N) K.shift();
     if(--regLeft<=0) regime();
     vol = Math.max(.55, vol*.86 + .14 + (Math.random()<.07 ? rnd(.8,1.6) : 0));
     cur=newCandle(); }
@@ -142,7 +146,7 @@ chart(){
     /* price scale */
     for(let i=0;i<16;i++){ g.fillStyle='rgba(200,220,218,.38)'; g.fillRect(CW-58,top+i*((CH-top-40)/16),40,8); }
     g.save(); g.beginPath(); g.rect(L,0,R-L,CH); g.clip();
-    const vmax=Math.max(.5,...K.map(c=>c.v));
+    const vmax=Math.max(.5,...K.map(c=>c.v))*1.05;
     all.forEach((c,i)=>{ const x=L+(i-frac+.5)*cw, up=c.c>=c.o, col=up?TEAL:RED;
       g.fillStyle=col; g.strokeStyle=col; g.lineWidth=2.5;
       g.beginPath(); g.moveTo(x,Yp(c.h)); g.lineTo(x,Yp(c.l)); g.stroke();
@@ -284,9 +288,12 @@ candle(){
   }
   const WL=C.winLights, lamp=sprite(48,[[0,'rgba(255,236,190,.95)'],[.45,'rgba(255,222,165,.8)'],[.7,'rgba(255,205,140,.35)'],[1,'rgba(255,190,120,0)']]);   // out-of-focus, like the photo's own lights
   const lit=[]; let step=0, nextEv=WL?1.2:1e9, gust=0, flick=1;
-  function lightAt(sp){ const d=rnd(0,1), y=WL.yFar+(WL.yNear-WL.yFar)*d;   // d: 0 = far, 1 = near
-    const vx0=Math.max(WL.x0,-ox/s+25);   // only the part of the window that is on screen
-    return {x:rnd(vx0,Math.max(vx0+40,WL.x1)), y, r:WL.rFar+(WL.rNear-WL.rFar)*d*d, a:0, on:true, tint:sp}; }
+  const inPoly=(x,y,P)=>{ let c=false; for(let i=0,j=P.length-1;i<P.length;j=i++){ const [xi,yi]=P[i],[xj,yj]=P[j]; if((yi>y)!==(yj>y) && x<(xj-xi)*(y-yi)/(yj-yi)+xi) c=!c; } return c; };
+  function lightAt(sp){ // a spot on the far shore (inside WL.poly), on the visible part of the window
+    const vx0=Math.max(WL.x0,-ox/s+25); let x,y,k=0;
+    do{ x=rnd(vx0,WL.x1); y=rnd(WL.yFar,WL.yNear); k++; }while(k<60 && !([[0,0],[.5,0],[-.5,0],[0,.45],[0,-.45]].every(([u,v])=>{ const r=WL.rFar+(WL.rNear-WL.rFar)*clamp((y-WL.yFar)/(WL.yNear-WL.yFar),0,1)**2; return inPoly(x+u*r*1.4,y+v*r*1.4,WL.poly); }) && !lit.some(l=>Math.hypot(l.x-x,l.y-y)<l.r*1.6)));
+    const d=clamp((y-WL.yFar)/(WL.yNear-WL.yFar),0,1);   // 0 = far (higher up), 1 = near
+    return {x, y, r:WL.rFar+(WL.rNear-WL.rFar)*d*d, a:0, on:true, tint:sp}; }
   function event(){ // a light comes on, another one, then one goes out ... 5 events, then again
     const onLights=lit.filter(l=>l.on), offStep=(step%5===2||step%5===4)&&onLights.length>=(WL.min||3) || onLights.length>=(WL.max||8);
     if(offStep && onLights.length) onLights[Math.floor(Math.random()*onLights.length)].on=false;
@@ -294,7 +301,7 @@ candle(){
     step++; nextEv=WL.every?rnd(WL.every*.85,WL.every*1.15):rnd(7,8); }
   function drawLights(dt){
     if(!WL) return; nextEv-=dt; if(nextEv<=0) event();
-    gs.save(); gs.beginPath(); gs.rect(X(WL.clip[0]),Y(WL.clip[1]),(WL.clip[2]-WL.clip[0])*s,(WL.clip[3]-WL.clip[1])*s); gs.clip();
+    gs.save(); gs.beginPath(); WL.poly.forEach(([px,py],i)=>i?gs.lineTo(X(px),Y(py)):gs.moveTo(X(px),Y(py))); gs.closePath(); gs.clip();
     for(let i=lit.length-1;i>=0;i--){ const l=lit[i]; l.a+=(l.on?1:-1)*dt/(l.on?1.4:1.8); if(l.a<=0&&!l.on){ lit.splice(i,1); continue; } l.a=clamp(l.a,0,1);
       const r=l.r*s; gs.globalAlpha=l.a*.82; if(l.tint){ gs.filter='hue-rotate(160deg) saturate(.6)'; }
       gs.drawImage(lamp,X(l.x)-r,Y(l.y)-r,r*2,r*2); gs.filter='none'; }
