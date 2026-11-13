@@ -70,7 +70,81 @@ twinkle(){
     gn.globalAlpha=gs.globalAlpha=1; }};
 },
 
-/* Trading: raindrops gather, stall, then run down the glass */
+/* Trading: the candlestick chart on the monitor runs forever. Drawn on a canvas that is
+   warped (CSS matrix3d) onto the four corners of the screen in the photo, blurred like the photo. */
+chart(){
+  const Q=C.screen.quad, CW=760, CH=500;
+  const cv=document.createElement('canvas'); cv.className='tv'; cv.width=CW*2; cv.height=CH*2;
+  Object.assign(cv.style,{position:'absolute',left:0,top:0,width:CW+'px',height:CH+'px',transformOrigin:'0 0',pointerEvents:'none',zIndex:1,opacity:0,transition:'opacity .8s'});
+  sceneEl.after(cv); const g=cv.getContext('2d'); g.scale(2,2);
+  function homog(src,dst){ const A=[],b=[];
+    for(let i=0;i<4;i++){ const [x,y]=src[i],[u,v]=dst[i];
+      A.push([x,y,1,0,0,0,-u*x,-u*y]); b.push(u); A.push([0,0,0,x,y,1,-v*x,-v*y]); b.push(v); }
+    for(let i=0;i<8;i++){ let m=i; for(let r=i+1;r<8;r++) if(Math.abs(A[r][i])>Math.abs(A[m][i])) m=r;
+      [A[i],A[m]]=[A[m],A[i]]; [b[i],b[m]]=[b[m],b[i]];
+      for(let r=0;r<8;r++) if(r!==i){ const f=A[r][i]/A[i][i]; for(let c=i;c<8;c++) A[r][c]-=f*A[i][c]; b[r]-=f*b[i]; } }
+    const h=b.map((v,i)=>v/A[i][i]); return h; }
+  /* market: log-price random walk with regimes (rally, sell-off, chop) and volatility
+     clusters, so it trends, pulls back, ranges and spikes like a real chart, forever */
+  const N=26; let K=[], lp=Math.log(100), cur=null, acc=0;
+  let mu=0, regLeft=0, vol=1;
+  const gauss=()=>{ let u=0,v=0; while(!u) u=Math.random(); while(!v) v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(6.2832*v); };
+  function regime(){ const r=Math.random();
+    mu = r<.38 ? rnd(.006,.012) : r<.66 ? -rnd(.005,.011) : rnd(-.002,.002);
+    regLeft = Math.round(rnd(6,16)); }
+  function newCandle(){ const o=Math.exp(lp); return {o,c:o,h:o,l:o,v:0}; }
+  function walk(dt){ const SIG=.017;
+    lp += mu*dt/PER + SIG*vol*Math.sqrt(dt/PER)*gauss();
+    const p=Math.exp(lp); cur.c=p; cur.h=Math.max(cur.h,p); cur.l=Math.min(cur.l,p);
+    cur.v += dt/PER*(.35+.65*Math.min(2.2,vol)/2.2)*rnd(.6,1.4); }
+  function close(){ K.push(cur); if(K.length>N) K.shift();
+    if(--regLeft<=0) regime();
+    vol = Math.max(.55, vol*.86 + .14 + (Math.random()<.07 ? rnd(.8,1.6) : 0));
+    cur=newCandle(); }
+  const PER=1.15;
+  regime(); cur=newCandle();
+  for(let i=0;i<N;i++){ for(let k=0;k<40;k++) walk(PER/40); close(); }
+  let lo=K.reduce((m,c)=>Math.min(m,c.l),1e9), hi=K.reduce((m,c)=>Math.max(m,c.h),0);
+  const TEAL='#5FE6D6', RED='#EE8F7C', BG='#1B383C';
+  function draw(t){
+    const all=K.concat([cur]); const tgtLo=Math.min(...all.map(c=>c.l)), tgtHi=Math.max(...all.map(c=>c.h));
+    const pad=(tgtHi-tgtLo)*.08; lo+=(tgtLo-pad-lo)*.05; hi+=(tgtHi+pad-hi)*.05;
+    g.fillStyle=BG; g.fillRect(0,0,CW,CH);
+    const vg=g.createRadialGradient(CW*.45,CH*.4,40,CW*.5,CH*.5,CW*.75); vg.addColorStop(0,'rgba(80,170,165,.10)'); vg.addColorStop(1,'rgba(0,0,0,.18)'); g.fillStyle=vg; g.fillRect(0,0,CW,CH);
+    /* header */
+    g.fillStyle='rgba(160,210,205,.35)'; g.fillRect(14,14,60,9); g.fillStyle='rgba(95,230,214,.45)'; g.fillRect(82,14,120,9); g.fillStyle='rgba(160,210,205,.22)'; g.fillRect(14,28,40,7);
+    const L=14, R=CW-74, top=52, bot=CH-120, vb=CH-30, cw=(R-L)/N, frac=acc/PER;
+    const Yp=v=>bot-(v-lo)/(hi-lo)*(bot-top);
+    /* grid */
+    g.strokeStyle='rgba(120,190,185,.08)'; g.lineWidth=1; for(let i=1;i<5;i++){ const y=top+(bot-top)*i/5; g.beginPath(); g.moveTo(L,y); g.lineTo(R,y); g.stroke(); }
+    /* price scale */
+    for(let i=0;i<16;i++){ g.fillStyle='rgba(200,220,218,.38)'; g.fillRect(CW-58,top+i*((CH-top-40)/16),40,8); }
+    g.save(); g.beginPath(); g.rect(L,0,R-L,CH); g.clip();
+    const vmax=Math.max(.5,...K.map(c=>c.v));
+    all.forEach((c,i)=>{ const x=L+(i-frac+.5)*cw, up=c.c>=c.o, col=up?TEAL:RED;
+      g.fillStyle=col; g.strokeStyle=col; g.lineWidth=2.5;
+      g.beginPath(); g.moveTo(x,Yp(c.h)); g.lineTo(x,Yp(c.l)); g.stroke();
+      const y1=Yp(Math.max(c.o,c.c)), y2=Yp(Math.min(c.o,c.c)); g.shadowColor=col; g.shadowBlur=up?16:10;
+      g.fillRect(x-cw*.34,y1,cw*.68,Math.max(3,y2-y1)); g.shadowBlur=0;
+      const vh=Math.min(1,c.v/vmax)*62; g.globalAlpha=.38; g.fillRect(x-cw*.42,vb-vh,cw*.84,vh); g.globalAlpha=1; });
+    /* moving average */
+    g.strokeStyle='rgba(95,230,214,.35)'; g.lineWidth=1.5; g.beginPath();
+    all.forEach((c,i)=>{ const s0=all.slice(Math.max(0,i-6),i+1), m=s0.reduce((a,b)=>a+b.c,0)/s0.length, x=L+(i-frac+.5)*cw; i?g.lineTo(x,Yp(m)):g.moveTo(x,Yp(m)); }); g.stroke();
+    g.restore();
+    /* last price line + tag */
+    const py=Yp(cur.c), up=cur.c>=cur.o; g.strokeStyle=up?'rgba(95,230,214,.5)':'rgba(238,143,124,.5)'; g.setLineDash([4,5]); g.beginPath(); g.moveTo(L,py); g.lineTo(R,py); g.stroke(); g.setLineDash([]);
+    g.fillStyle=up?TEAL:RED; g.shadowColor=g.fillStyle; g.shadowBlur=14; g.fillRect(CW-64,py-9,54,18); g.shadowBlur=0;
+  }
+  function tickMarket(dt){ acc+=dt; walk(dt); if(acc>=PER){ acc-=PER; close(); } }
+  return {
+    layout(){ const src=[[0,0],[CW,0],[CW,CH],[0,CH]], dst=Q.map(([x,y])=>[X(x),Y(y)]); const h=homog(src,dst);
+      cv.style.transform=`matrix3d(${h[0]},${h[3]},0,${h[6]},${h[1]},${h[4]},0,${h[7]},0,0,1,0,${h[2]},${h[5]},0,1)`;
+      cv.style.filter=`blur(${Math.max(.6,(C.screen.blur||3)*s).toFixed(2)}px) saturate(1.05)`; },
+    ready(){ draw(0); cv.style.opacity=1; },
+    frame(t,dt){ tickMarket(dt); draw(t); }
+  };
+},
+/* Trading (old): raindrops gather, stall, then run down the glass */
 rain(){
   const D=[], T=[]; const A=C.area, EX=C.exclude||[];
   const inEx=(x,y)=>EX.some(e=>x>e[0]&&x<e[2]&&y>e[1]&&y<e[3]);
@@ -100,6 +174,45 @@ rain(){
 },
 
 /* Puzzles: the fire dances, embers drift up, warm light breathes on the room */
+/* Puzzles: the pendant bulb flickers now and then, like in a thriller; the room it lights
+   sinks into the dark with it, while the fireplace keeps its own glow. */
+bulb(){
+  const B=C.bulb, warm=sprite(64,[[0,'rgba(255,200,120,.9)'],[.35,'rgba(255,170,90,.35)'],[1,'rgba(255,150,70,0)']]);
+  let L=1, target=1, seq=[], segLeft=0, next=2.6;
+  function pattern(){ const P=[], n=Math.round(rnd(2,5));
+    for(let i=0;i<n;i++){ P.push([rnd(.03,.09), rnd(0,.25)]); P.push([rnd(.04,.12), rnd(.75,1)]); }
+    if(Math.random()<.6) P.push([rnd(.35,.9), rnd(0,.12)]);                  // the long, tense blackout
+    P.push([rnd(.05,.1), rnd(.2,.5)]); P.push([rnd(.12,.25), 1.1]);          // stutter back, then a small surge
+    return P; }
+  let drawn=false;
+  return {frame(t,dt){
+    next-=dt;
+    if(next<=0 && !seq.length){ seq=pattern(); segLeft=0; next=rnd(7,14); }
+    if(seq.length){ segLeft-=dt; if(segLeft<=0){ const sg=seq.shift(); segLeft=sg[0]; target=sg[1]; } }
+    else target=1;
+    const hum=1+.012*nz(t*13.7)+.006*nz(t*31,2);
+    L += (target-L)*(1-Math.exp(-dt/(target<L?.035:.022)));
+    const lv=L*hum, dark=clamp(1-lv,0,1), surge=clamp(lv-1,0,.2);
+    if(dark<.004 && surge<.004){ if(drawn){ gn.clearRect(0,0,W,H); gs.clearRect(0,0,W,H); drawn=false; } return; }
+    drawn=true; gn.clearRect(0,0,W,H); gs.clearRect(0,0,W,H);
+    const bx=X(B.x), by=Y(B.y);
+    if(dark>0){
+      const R=B.reach*s, g=gn.createRadialGradient(bx,by,0,bx,by,R), a=dark*B.depth;
+      g.addColorStop(0,`rgba(6,7,9,${a})`); g.addColorStop(.45,`rgba(6,7,9,${a*.85})`); g.addColorStop(1,`rgba(6,7,9,${a*.45})`);
+      gn.fillStyle=g; gn.fillRect(0,0,W,H);
+      // the fireplace is its own light: give it back
+      const F=B.keep, fr=F.r*s, fx=X(F.x), fy=Y(F.y);
+      gn.save(); gn.globalCompositeOperation='destination-out';
+      const k=gn.createRadialGradient(fx,fy,0,fx,fy,fr); k.addColorStop(0,'rgba(0,0,0,.95)'); k.addColorStop(.6,'rgba(0,0,0,.6)'); k.addColorStop(1,'rgba(0,0,0,0)');
+      gn.fillStyle=k; gn.fillRect(fx-fr,fy-fr,fr*2,fr*2); gn.restore();
+      // the bulb itself goes grey: the filament cools
+      const br=B.r*s, gb=gn.createRadialGradient(bx,by,0,bx,by,br);
+      gb.addColorStop(0,`rgba(58,46,34,${dark*.92})`); gb.addColorStop(.55,`rgba(30,26,22,${dark*.8})`); gb.addColorStop(1,'rgba(20,18,16,0)');
+      gn.fillStyle=gb; gn.fillRect(bx-br,by-br,br*2,br*2);
+    }
+    if(surge>0){ const R=B.glow*s; gs.globalAlpha=surge*4; gs.drawImage(warm,bx-R,by-R,R*2,R*2); gs.globalAlpha=1; }
+  }};
+},
 fire(){
   const F=C.flame, glow=sprite(64,[[0,'rgba(255,170,80,.9)'],[.4,'rgba(255,120,40,.3)'],[1,'rgba(255,100,30,0)']]);
   const spark=sprite(8,[[0,'rgba(255,230,170,1)'],[.5,'rgba(255,150,60,.6)'],[1,'rgba(255,120,40,0)']]);
