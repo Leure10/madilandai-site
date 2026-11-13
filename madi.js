@@ -72,15 +72,28 @@ const css2=`
 .madi.away .say,.madi.dodge .say{opacity:0!important;transform:translateY(10px) scale(.85)!important;animation-play-state:paused}
 .madi.dodge{translate:0 -168px}
 .madi .bub{display:none!important}
-@media (max-width:900px){.madi .say{display:none}}
+@media (max-width:900px){.madi .say{display:none}
+  .madi.docked{position:absolute!important;z-index:5;right:12px;bottom:12px;top:auto;left:auto;translate:none}
+  .madi.docked.inhero{top:92px;bottom:auto;right:14px}
+  .madi.docked .m3{width:80px;height:92px}
+  .madi.docked .m3 .gr{width:54px;margin-left:-27px}}
 @media (prefers-reduced-motion:reduce){.madi,.madi .say{transition:none}.madi .say{animation:none;opacity:1;transform:none}.madi .say .spk,.madi .say small::after{animation:none}}`;
 const st2=document.createElement('style'); st2.textContent=css2; document.head.appendChild(st2);
 const say=document.createElement('span'); say.className='say'; say.setAttribute('aria-hidden','true');
 say.innerHTML=(isHome?'<i><b>Not sure where to start?</b><small>Ask me, I\'ll find your book</small></i>'
                      :'<i><b>Not sure which one?</b><small>Ask me, I\'ll find it for you</small></i>')
   +'<span class="spk"></span><span class="spk"></span><span class="spk"></span>';
-a.style.position='fixed';
 a.appendChild(say);
+
+/* phones: Madi docks inside the picture at the top of the page and scrolls away with it,
+   instead of floating over covers and titles */
+const mq=matchMedia('(max-width:900px)');
+function dock(){
+  const box=document.querySelector('.stage')||document.getElementById('hero');
+  if(mq.matches && box){ a.classList.add('docked'); a.classList.toggle('inhero',!document.querySelector('.stage')); box.appendChild(a); }
+  else { a.classList.remove('docked','inhero'); document.body.appendChild(a); }
+}
+dock(); mq.addEventListener('change',dock);
 
 /* the bubble belongs to the hero; below it, it would cover book titles */
 const away=()=>a.classList.toggle('away',scrollY>innerHeight*.35);

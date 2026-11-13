@@ -16,7 +16,7 @@ const css=`
 .up:hover svg,.up:focus-visible svg{transform:translateY(-2px)}
 .up:focus-visible{outline:none}
 .up:focus-visible span{text-decoration:underline;text-underline-offset:3px}
-@media (max-width:700px){.up{left:16px;width:50px;height:62px;padding-top:21px}}
+@media (max-width:700px){.up{left:12px;width:44px;height:56px;padding-top:20px;font-size:11px}}
 @media (prefers-reduced-motion:reduce){.up,.up.on,.up svg{transition:none}}`;
 const st=document.createElement('style'); st.textContent=css; document.head.appendChild(st);
 const b=document.createElement('button');
@@ -25,7 +25,10 @@ b.innerHTML='<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 12V2M2.5 6.
 document.body.appendChild(b);
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let tick=false;
-function upd(){ tick=false; b.classList.toggle('on', scrollY>innerHeight*.6); }
+const phone=matchMedia('(max-width:700px)'); let lastY=scrollY, dir=0;
+function upd(){ tick=false; const y=scrollY, d=y-lastY; if(Math.abs(d)>4){ dir=Math.sign(d); lastY=y; }
+  const past=y>innerHeight*.6, end=y+innerHeight>=document.documentElement.scrollHeight-40;
+  b.classList.toggle('on', past && (!phone.matches || dir<0 || end)); }
 addEventListener('scroll',()=>{ if(!tick){ tick=true; requestAnimationFrame(upd); } },{passive:true});
 addEventListener('resize',upd);
 b.addEventListener('click',()=>{ scrollTo({top:0,behavior:reduce?'auto':'smooth'}); b.blur(); });

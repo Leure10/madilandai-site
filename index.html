@@ -188,6 +188,11 @@ canvas.motes{transition:translate .9s var(--ease-out),opacity .5s}
   .shelf{grid-template-columns:repeat(3,1fr);row-gap:6px;bottom:14px}
   .grp .lb b{font-size:18px}
   .grp .bk{display:none}
+  .grp{color:var(--ink)}
+  .grp .lb span{color:var(--ink-2)}
+  .grp.on .lb b{color:var(--ink)}
+  .grp::before{background:var(--teal);box-shadow:0 0 8px rgba(35,166,158,.5)}
+  .shelf::before{background:linear-gradient(90deg,rgba(35,166,158,0),rgba(35,166,158,.6) 20%,rgba(35,166,158,.6) 80%,rgba(35,166,158,0))}
   .madi .bub{display:none}
   .copy::before,.copy::after{display:none}
   .madi{bottom:110px}
@@ -326,7 +331,7 @@ function tick(now){
 }
 start();
 </script>
-<script src="up.js?v=2"></script>
-<script src="madi.js?v=2"></script>
+<script src="up.js?v=3"></script>
+<script src="madi.js?v=3"></script>
 </body>
 </html>

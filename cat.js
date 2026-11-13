@@ -93,7 +93,7 @@ chart(){
     mu = r<.38 ? rnd(.006,.012) : r<.66 ? -rnd(.005,.011) : rnd(-.002,.002);
     regLeft = Math.round(rnd(6,16)); }
   function newCandle(){ const o=Math.exp(lp); return {o,c:o,h:o,l:o,v:0}; }
-  function walk(dt){ const SIG=.017;
+  function walk(dt){ const SIG=.017; if(!(dt>0)) return;
     lp += mu*dt/PER + SIG*vol*Math.sqrt(dt/PER)*gauss();
     const p=Math.exp(lp); cur.c=p; cur.h=Math.max(cur.h,p); cur.l=Math.min(cur.l,p);
     cur.v += dt/PER*(.35+.65*Math.min(2.2,vol)/2.2)*rnd(.6,1.4); }
@@ -135,7 +135,7 @@ chart(){
     const py=Yp(cur.c), up=cur.c>=cur.o; g.strokeStyle=up?'rgba(95,230,214,.5)':'rgba(238,143,124,.5)'; g.setLineDash([4,5]); g.beginPath(); g.moveTo(L,py); g.lineTo(R,py); g.stroke(); g.setLineDash([]);
     g.fillStyle=up?TEAL:RED; g.shadowColor=g.fillStyle; g.shadowBlur=14; g.fillRect(CW-64,py-9,54,18); g.shadowBlur=0;
   }
-  function tickMarket(dt){ acc+=dt; walk(dt); if(acc>=PER){ acc-=PER; close(); } }
+  function tickMarket(dt){ if(!(dt>0)) return; acc+=dt; walk(dt); if(acc>=PER){ acc-=PER; close(); } }
   return {
     layout(){ const src=[[0,0],[CW,0],[CW,CH],[0,CH]], dst=Q.map(([x,y])=>[X(x),Y(y)]); const h=homog(src,dst);
       cv.style.transform=`matrix3d(${h[0]},${h[3]},0,${h[6]},${h[1]},${h[4]},0,${h[7]},0,0,1,0,${h[2]},${h[5]},0,1)`;
@@ -307,7 +307,7 @@ let onScreen=true, running=false, last=0, t0=performance.now();
 function start(){ if(reduce||running||!ready||!onScreen||document.hidden) return; running=true; last=performance.now(); requestAnimationFrame(tick); }
 function tick(now){
   if(!onScreen||document.hidden){ running=false; return; }
-  const dt=Math.min(.05,(now-last)/1000); last=now;
+  const dt=Math.max(0,Math.min(.05,(now-last)/1000)); last=now;
   FX.frame((now-t0)/1000,dt); requestAnimationFrame(tick);
 }
 new IntersectionObserver(es=>{ onScreen=es[0].isIntersecting; start(); }).observe(stage);
