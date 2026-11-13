@@ -340,11 +340,11 @@ document.addEventListener('visibilitychange',start);
 function tick(now){
   if(!onScreen || document.hidden){ running=false; return; }
   const dt=Math.min(.05,(now-last)/1000); last=now; g.clearRect(0,0,W,H);
-  acc+=dt; if(current==='home' && !reduce && acc>.1636){ acc=0; if(P.length<61) spawn(); }
+  acc+=dt; if(current==='home' && !reduce && acc>.1){ acc=0; if(P.length<110) spawn(); }
   for(let i=P.length-1;i>=0;i--){ const p=P[i]; p.age+=dt;
     const x=p.x0+p.vx*p.age+Math.sin(p.ph+p.age*p.f*6.283)*p.amp, y=p.y0-p.vy*p.age;
     const a=Math.sin(Math.PI*Math.min(1,p.age/p.max))*(current==='home'?1:0);
-    if(a>.01){ g.globalAlpha=.55*a; const d=p.r*3.4+1.2; g.drawImage(spr,x-d/2,y-d/2,d,d); }
+    if(a>.01){ g.globalAlpha=.62*a; const d=p.r*3.4+1.2; g.drawImage(spr,x-d/2,y-d/2,d,d); }
     if(p.age>p.max) P.splice(i,1); }
   g.globalAlpha=1; requestAnimationFrame(tick);
 }
