@@ -34,13 +34,13 @@ const EFFECTS={
 /* Planners: steam curling up from the coffee */
 steam(){
   const soft=sprite(64,[[0,'rgba(255,255,255,.9)'],[.45,'rgba(255,255,255,.35)'],[1,'rgba(255,255,255,0)']]);
-  const P=[]; let acc=0; const {x:cx,y:cy,w:cw}=C.cup;
+  const P=[]; let acc=0; const {x:cx,y:cy,w:cw}=C.cup, K=C.cup.k||1, SZ=C.cup.size||1;
   return {frame(t,dt){
-    acc+=dt; while(acc>.09){ acc-=.09; if(P.length<70) P.push({x:cx+rnd(-cw*.32,cw*.32), y:cy, a:0, max:rnd(3.6,5.6), v:rnd(34,52), r0:rnd(8,14), ph:rnd(0,6.28), sw:rnd(.6,1.1)}); }
+    acc+=dt; while(acc>.09){ acc-=.09; if(P.length<90) P.push({x:cx+rnd(-cw*.3,cw*.3), y:cy, a:0, max:rnd(3.6,5.6), v:rnd(34,52)*SZ, r0:rnd(8,14)*SZ, ph:rnd(0,6.28), sw:rnd(.6,1.1)}); }
     gs.clearRect(0,0,W,H);
     for(let i=P.length-1;i>=0;i--){ const p=P[i]; p.a+=dt; const k=p.a/p.max; if(k>=1){P.splice(i,1);continue;}
       const rise=p.v*p.a, drift=Math.sin(p.ph+p.a*p.sw*1.6)*(6+rise*.22)+nz(t*.35,p.ph)*rise*.12;
-      const r=(p.r0+rise*.26)*s, al=Math.sin(Math.PI*Math.min(1,k*1.15))*.26*(1-k*.45);
+      const r=(p.r0+rise*.26)*s, al=Math.min(.9,Math.sin(Math.PI*Math.min(1,k*1.15))*.26*K*(1-k*.45));
       gs.globalAlpha=al; gs.drawImage(soft,X(p.x+drift)-r,Y(p.y-rise)-r,r*2,r*2); }
     gs.globalAlpha=1; }};
 },
@@ -201,7 +201,7 @@ rain(){
 bulb(){
   const B=C.bulb, warm=sprite(64,[[0,'rgba(255,200,120,.9)'],[.35,'rgba(255,170,90,.35)'],[1,'rgba(255,150,70,0)']]);
   let L=1, target=1, seq=[], segLeft=0, next=2.6;
-  function pattern(){ const P=[], n=Math.round(rnd(2,5));
+  function pattern(){ const P=[], n=Math.round(rnd(3,6));
     for(let i=0;i<n;i++){ P.push([rnd(.03,.09), rnd(0,.25)]); P.push([rnd(.04,.12), rnd(.75,1)]); }
     if(Math.random()<.6) P.push([rnd(.35,.9), rnd(0,.12)]);                  // the long, tense blackout
     P.push([rnd(.05,.1), rnd(.2,.5)]); P.push([rnd(.12,.25), 1.1]);          // stutter back, then a small surge
@@ -226,7 +226,10 @@ bulb(){
       const F=B.keep, fr=F.r*s, fx=X(F.x), fy=Y(F.y);
       gn.save(); gn.globalCompositeOperation='destination-out';
       const k=gn.createRadialGradient(fx,fy,0,fx,fy,fr); k.addColorStop(0,'rgba(0,0,0,.95)'); k.addColorStop(.6,'rgba(0,0,0,.6)'); k.addColorStop(1,'rgba(0,0,0,0)');
-      gn.fillStyle=k; gn.fillRect(fx-fr,fy-fr,fr*2,fr*2); gn.restore();
+      gn.fillStyle=k; gn.fillRect(fx-fr,fy-fr,fr*2,fr*2);
+      // the window: moonlight from outside does not depend on the bulb
+      (B.keepRects||[]).forEach(([x0,y0,x1,y1,f])=>{ gn.filter=`blur(${Math.max(1,f*s)}px)`; gn.fillStyle='#000'; gn.fillRect(X(x0),Y(y0),(x1-x0)*s,(y1-y0)*s); gn.filter='none'; });
+      gn.restore();
       // the bulb itself goes grey: the filament cools
       const br=B.r*s, gb=gn.createRadialGradient(bx,by,0,bx,by,br);
       gb.addColorStop(0,`rgba(58,46,34,${dark*.92})`); gb.addColorStop(.55,`rgba(30,26,22,${dark*.8})`); gb.addColorStop(1,'rgba(20,18,16,0)');
@@ -279,12 +282,30 @@ candle(){
     const gr=o.createRadialGradient(R,R,0,R,R,R); gr.addColorStop(0,'rgba(0,0,0,1)'); gr.addColorStop(.55,'rgba(0,0,0,.95)'); gr.addColorStop(1,'rgba(0,0,0,0)');
     o.fillStyle=gr; o.fillRect(0,0,R*2,R*2); o.globalCompositeOperation='source-over';
   }
-  return {frame(t){
-    gn.clearRect(0,0,W,H); gs.clearRect(0,0,W,H);
+  const WL=C.winLights, lamp=sprite(48,[[0,'rgba(255,236,190,.95)'],[.45,'rgba(255,222,165,.8)'],[.7,'rgba(255,205,140,.35)'],[1,'rgba(255,190,120,0)']]);   // out-of-focus, like the photo's own lights
+  const lit=[]; let step=0, nextEv=WL?rnd(2,3):1e9, gust=0, flick=1;
+  function lightAt(sp){ const d=rnd(0,1), y=WL.yFar+(WL.yNear-WL.yFar)*d;   // d: 0 = far, 1 = near
+    const vx0=Math.max(WL.x0,-ox/s+25);   // only the part of the window that is on screen
+    return {x:rnd(vx0,Math.max(vx0+40,WL.x1)), y, r:WL.rFar+(WL.rNear-WL.rFar)*d*d, a:0, on:true, tint:sp}; }
+  function event(){ // a light comes on, another one, then one goes out ... 5 events, then again
+    const offStep=step%5===2||step%5===4, onLights=lit.filter(l=>l.on);
+    if(offStep && onLights.length) onLights[Math.floor(Math.random()*onLights.length)].on=false;
+    else lit.push(lightAt(Math.random()<.25?1:0));
+    step++; nextEv=rnd(7,8); }
+  function drawLights(dt){
+    if(!WL) return; nextEv-=dt; if(nextEv<=0) event();
+    gs.save(); gs.beginPath(); gs.rect(X(WL.clip[0]),Y(WL.clip[1]),(WL.clip[2]-WL.clip[0])*s,(WL.clip[3]-WL.clip[1])*s); gs.clip();
+    for(let i=lit.length-1;i>=0;i--){ const l=lit[i]; l.a+=(l.on?1:-1)*dt/(l.on?1.4:1.8); if(l.a<=0&&!l.on){ lit.splice(i,1); continue; } l.a=clamp(l.a,0,1);
+      const r=l.r*s; gs.globalAlpha=l.a*.82; if(l.tint){ gs.filter='hue-rotate(160deg) saturate(.6)'; }
+      gs.drawImage(lamp,X(l.x)-r,Y(l.y)-r,r*2,r*2); gs.filter='none'; }
+    gs.restore(); gs.globalAlpha=1; }
+  return {frame(t,dt){
+    gn.clearRect(0,0,W,H); gs.clearRect(0,0,W,H); drawLights(dt||0);
     const R=K.cover*s, cy=K.cy;
     
-    const h=(K.base-K.tip)*(1+.06*nz(t*2.3)+.03*nz(t*11,2)), w=K.w*(1+.05*nz(t*3.7,4));
-    const sway=(nz(t*.9,1)*4+nz(t*4.3,5)*1.4), bx=X(K.x), by=Y(K.base), tx=X(K.x+sway), ty=Y(K.base-h), hw=w*s/2;
+    gust=Math.max(0,nz(t*.37,7)-.45)*2.2, flick=1+(.11+.12*gust)*nz(t*2.3)+(.06+.08*gust)*nz(t*13,2)+.05*nz(t*23,3);
+    const h=(K.base-K.tip)*flick, w=K.w*(1+.07*nz(t*3.7,4)-.05*gust);
+    const sway=(nz(t*.9,1)*6+nz(t*4.3,5)*2.2)*(1+gust), bx=X(K.x), by=Y(K.base), tx=X(K.x+sway), ty=Y(K.base-h), hw=w*s/2;
     // flame body
     gn.save(); gn.shadowColor='rgba(255,170,70,.9)'; gn.shadowBlur=14*s;
     const g1=gn.createLinearGradient(0,by,0,ty);
@@ -298,14 +319,14 @@ candle(){
     gn.fillStyle=g2; gn.beginPath(); gn.ellipse(bx+(tx-bx)*.2,by-(by-ty)*.34,hw*.8,(by-ty)*.3,0,0,6.283); gn.fill();
     
     // halo
-    const a=.30+.08*nz(t*2.6)+.05*nz(t*8.9,1), Rh=K.halo*s;
+    const a=.32+.12*(flick-1)*2.4+.05*nz(t*8.9,1), Rh=K.halo*s*(1+.06*(flick-1)*3);
     gs.globalAlpha=clamp(a,0,1); gs.drawImage(halo,X(K.x)-Rh,Y(cy)-Rh,Rh*2,Rh*2); gs.globalAlpha=1; }};
 },
 
 /* Journals: snow falling past the window */
 snow(){
   const A=C.area, EX=C.exclude||[], P=[]; const flake=sprite(16,[[0,'rgba(255,255,255,1)'],[.5,'rgba(255,255,255,.6)'],[1,'rgba(255,255,255,0)']]);
-  const N=C.count||140;
+  const N=C.count||140; let glass=null; if(C.glass){ glass=new Image(); glass.src=C.glass; }
   function mk(top){ const z=Math.random(); return {x:rnd(A[0],A[2]), y:top?A[1]-rnd(0,40):rnd(A[1],A[3]), z, r:3.5+z*8, v:26+z*55, ph:rnd(0,6.28), sw:rnd(.4,1)}; }
   for(let i=0;i<N;i++) P.push(mk(false));
   return {frame(t,dt){
@@ -315,11 +336,13 @@ snow(){
       if(p.y>A[3]+10){ Object.assign(p,mk(true)); }
       if(EX.some(e=>p.x>e[0]&&p.x<e[2]&&p.y>e[1]&&p.y<e[3])) continue;
       const r=Math.max(.8,p.r*s); gn.globalAlpha=.35+p.z*.5; gn.drawImage(flake,X(p.x)-r,Y(p.y)-r,r*2,r*2); }
-    gn.restore(); gn.globalAlpha=1; }};
+    gn.restore(); gn.globalAlpha=1;
+    if(glass&&glass.complete&&glass.naturalWidth){ gn.save(); gn.globalCompositeOperation='destination-in'; gn.drawImage(glass,X(0),Y(0),C.w*s,C.h*s); gn.restore(); } }};
 }
 };
 
-const FX=EFFECTS[C.fx]();
+const FXL=[C.fx].concat(C.fx2?[C.fx2]:[]).map(n=>EFFECTS[n]());
+const FX={layout(){FXL.forEach(f=>f.layout&&f.layout());}, ready(){FXL.forEach(f=>f.ready&&f.ready());}, frame(t,dt){FXL.forEach(f=>f.frame(t,dt));}};
 let ready=false;
 img.onload=()=>{ layout(); sceneEl.classList.add('ready'); ready=true; FX.ready&&FX.ready(); start(); };
 addEventListener('resize',()=>{ layout(); });
