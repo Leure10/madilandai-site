@@ -75,6 +75,7 @@ const css2=`
 @media (max-width:900px){.madi .say{display:none}
   .madi.docked{position:absolute!important;z-index:5;right:10px;bottom:8px;top:auto;left:auto;translate:none}
   .madi.docked.inhero{top:calc(78px + 100vw / 1.79 - 72px);bottom:auto;right:10px}
+  .madi.docked.left{right:auto;left:10px}
   .madi.docked .m3{width:56px;height:64px}
   .madi.docked .m3 .gr{width:38px;margin-left:-19px;height:8px}}
 @media (prefers-reduced-motion:reduce){.madi,.madi .say{transition:none}.madi .say{animation:none;opacity:1;transform:none}.madi .say .spk,.madi .say small::after{animation:none}}`;
@@ -90,8 +91,8 @@ a.appendChild(say);
 const mq=matchMedia('(max-width:900px)');
 function dock(){
   const box=document.querySelector('.stage')||document.getElementById('hero');
-  if(mq.matches && box){ a.classList.add('docked'); a.classList.toggle('inhero',!document.querySelector('.stage')); box.appendChild(a); }
-  else { a.classList.remove('docked','inhero'); document.body.appendChild(a); }
+  if(mq.matches && box){ a.classList.add('docked'); a.classList.toggle('inhero',!document.querySelector('.stage')); a.classList.toggle('left',!!(window.SCENE&&window.SCENE.madiLeft)); box.appendChild(a); }
+  else { a.classList.remove('docked','inhero','left'); document.body.appendChild(a); }
 }
 dock(); mq.addEventListener('change',dock);
 
