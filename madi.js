@@ -73,10 +73,10 @@ const css2=`
 .madi.dodge{translate:0 -168px}
 .madi .bub{display:none!important}
 @media (max-width:900px){.madi .say{display:none}
-  .madi.docked{position:absolute!important;z-index:5;right:12px;bottom:12px;top:auto;left:auto;translate:none}
-  .madi.docked.inhero{top:92px;bottom:auto;right:14px}
-  .madi.docked .m3{width:80px;height:92px}
-  .madi.docked .m3 .gr{width:54px;margin-left:-27px}}
+  .madi.docked{position:absolute!important;z-index:5;right:10px;bottom:8px;top:auto;left:auto;translate:none}
+  .madi.docked.inhero{top:calc(78px + 100vw / 1.79 - 72px);bottom:auto;right:10px}
+  .madi.docked .m3{width:56px;height:64px}
+  .madi.docked .m3 .gr{width:38px;margin-left:-19px;height:8px}}
 @media (prefers-reduced-motion:reduce){.madi,.madi .say{transition:none}.madi .say{animation:none;opacity:1;transform:none}.madi .say .spk,.madi .say small::after{animation:none}}`;
 const st2=document.createElement('style'); st2.textContent=css2; document.head.appendChild(st2);
 const say=document.createElement('span'); say.className='say'; say.setAttribute('aria-hidden','true');
