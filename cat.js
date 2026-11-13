@@ -45,7 +45,29 @@ steam(){
     gs.globalAlpha=1; }};
 },
 
-/* Coloring: the string lights on the wall breathe on and off, one after another */
+/* Coloring: the tiny animals coloring the book are a seamless video loop laid exactly over
+   their place in the photo (its edges are baked from the same photo, so no seam shows).
+   The child stays a still; the video fades in only once it is really playing. */
+video(){
+  const V=C.vid, [bx0,by0,bx1,by1]=V.box;
+  const v=document.createElement('video');
+  Object.assign(v,{muted:true,loop:true,playsInline:true,preload:'auto'});
+  v.setAttribute('muted',''); v.setAttribute('playsinline',''); v.setAttribute('aria-hidden','true'); v.disablePictureInPicture=true;
+  Object.assign(v.style,{position:'absolute',left:0,top:0,pointerEvents:'none',zIndex:1,opacity:0,transition:'opacity .9s',objectFit:'fill'});
+  if(V.mask){ const m='url('+V.mask+') 0 0/100% 100% no-repeat'; v.style.webkitMask=m; v.style.mask=m; }
+       v.src=V.src; sceneEl.after(v);
+  v.addEventListener('playing',()=>{ v.style.opacity=1; },{once:true});
+  const play=()=>{ if(reduce) return; const p=v.play(); p&&p.catch(()=>{}); };
+  new IntersectionObserver(es=>{ es[0].isIntersecting?play():v.pause(); }).observe(stage);
+  document.addEventListener('visibilitychange',()=>{ document.hidden?v.pause():play(); });
+  return {
+    layout(){ Object.assign(v.style,{left:X(bx0)+'px',top:Y(by0)+'px',width:(bx1-bx0)*s+'px',height:(by1-by0)*s+'px'}); },
+    ready(){ play(); },
+    frame(){}
+  };
+},
+
+/* Coloring (old): the string lights on the wall breathe on and off, one after another */
 twinkle(){
   const B=C.bulbs.map((b,i)=>({...b, ph:i*1.15+rnd(0,.6), sp:rnd(.75,1.05)}));
   const glow=sprite(64,[[0,'rgba(235,255,252,1)'],[.18,'rgba(160,245,236,.75)'],[.5,'rgba(127,227,218,.18)'],[1,'rgba(127,227,218,0)']]);
