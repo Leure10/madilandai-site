@@ -7,7 +7,14 @@ const stage=document.querySelector('.stage'), sceneEl=stage.querySelector('.scen
 const cn=stage.querySelector('canvas.n'), cs=stage.querySelector('canvas.s');
 const gn=cn.getContext('2d'), gs=cs.getContext('2d');
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const img=new Image(); img.decoding='async'; img.src=C.src;
+/* the browser picks the picture size (AVIF); the original JPEG is the fallback. Effects keep using original-image
+   coordinates: put() converts them to the size that was actually loaded. */
+const img=new Image(), pick=new Image(); let SRC='';
+img.decoding='async';
+pick.onload=()=>{ if(pick.currentSrc && pick.currentSrc!==SRC){ SRC=pick.currentSrc; img.src=SRC; } };
+pick.onerror=()=>{ pick.onload=pick.onerror=null; SRC=C.src; img.src=SRC; };
+pick.sizes=C.sizes; pick.srcset=C.set;
+const put=(g,sx,sy,sw,sh,...d)=>{ const q=img.naturalWidth/C.w; g.drawImage(img,sx*q,sy*q,sw*q,sh*q,...d); };
 let W=0,H=0,DPR=1,s=1,ox=0,oy=0;
 const X=x=>ox+x*s, Y=y=>oy+y*s;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -17,7 +24,7 @@ function layout(){
   s=Math.max(W/C.w,H/C.h);
   const mob=W<700 && H>W*.8, ax=mob?(C.mx??.5):(C.ax??.55);
   ox=clamp(W*ax-C.fxp*s, W-C.w*s, 0); oy=clamp(H*.5-C.fy*s, H-C.h*s, 0);
-  sceneEl.style.backgroundImage=`url(${C.src})`;
+  if(SRC) sceneEl.style.backgroundImage=`url(${SRC})`;
   sceneEl.style.backgroundSize=`${C.w*s}px ${C.h*s}px`;
   sceneEl.style.backgroundPosition=`${ox}px ${oy}px`;
   FX.layout && FX.layout();
@@ -51,18 +58,38 @@ steam(){
 video(){
   const V=C.vid, [bx0,by0,bx1,by1]=V.box;
   const v=document.createElement('video');
-  Object.assign(v,{muted:true,loop:true,playsInline:true,preload:'auto'});
-  v.setAttribute('muted',''); v.setAttribute('playsinline',''); v.setAttribute('aria-hidden','true'); v.disablePictureInPicture=true;
+  Object.assign(v,{muted:true,playsInline:true,preload:'auto'});
+  v.setAttribute('muted',''); v.setAttribute('playsinline',''); v.setAttribute('aria-hidden','true'); v.disablePictureInPicture=true; v.disableRemotePlayback=true;
   Object.assign(v.style,{position:'absolute',left:0,top:0,pointerEvents:'none',zIndex:1,opacity:0,transition:'opacity .9s',objectFit:'fill'});
   if(V.mask){ const m='url('+V.mask+') 0 0/100% 100% no-repeat'; v.style.webkitMask=m; v.style.mask=m; }
-       v.src=V.src; sceneEl.after(v);
+  /* Gapless: the same clip is appended again and again to one continuous stream, so the
+     player never seeks back to the start. Plain loop is the fallback. */
+  const plain=()=>{ v.loop=true; v.src=V.src; play(); };
+  function gapless(){
+    const MS=window.ManagedMediaSource||window.MediaSource;
+    if(!V.seg || !MS || !MS.isTypeSupported(V.mime)) return plain();
+    const ms=new MS(); let sb=null, data=null, n=0, dead=false;
+    const fail=()=>{ if(dead) return; dead=true; clearInterval(tm); plain(); };
+    const feed=()=>{ if(dead||!sb||!data||sb.updating||ms.readyState!=='open') return;
+      try{
+        if(sb.buffered.length && v.currentTime-sb.buffered.start(0)>V.dur*3){ sb.remove(0,v.currentTime-V.dur); return; }
+        if(n*V.dur-v.currentTime<V.dur*2){ sb.timestampOffset=n*V.dur; n++; sb.appendBuffer(data); }
+      }catch(e){ if(e.name!=='QuotaExceededError') fail(); } };
+    const tm=setInterval(feed,1000);
+    ms.addEventListener('sourceopen',()=>{ if(sb) return; try{ sb=ms.addSourceBuffer(V.mime); }catch(e){ return fail(); }
+      sb.addEventListener('updateend',()=>{ feed(); play(); }); sb.addEventListener('error',fail); feed(); });
+    fetch(V.segM&&innerWidth*Math.min(devicePixelRatio||1,3)<1500&&innerWidth<=700?V.segM:V.seg).then(r=>{ if(!r.ok) throw 0; return r.arrayBuffer(); }).then(b=>{ data=b; feed(); }).catch(fail);
+    v.src=URL.createObjectURL(ms);
+  }
+  sceneEl.after(v);
   v.addEventListener('playing',()=>{ v.style.opacity=1; },{once:true});
-  const play=()=>{ if(reduce) return; const p=v.play(); p&&p.catch(()=>{}); };
-  new IntersectionObserver(es=>{ es[0].isIntersecting?play():v.pause(); }).observe(stage);
+  let seen=false;
+  function play(){ if(reduce||!seen||document.hidden) return; const p=v.play(); p&&p.catch(()=>{}); }
+  new IntersectionObserver(es=>{ seen=es[es.length-1].isIntersecting; seen?play():v.pause(); }).observe(stage);
   document.addEventListener('visibilitychange',()=>{ document.hidden?v.pause():play(); });
   return {
     layout(){ Object.assign(v.style,{left:X(bx0)+'px',top:Y(by0)+'px',width:(bx1-bx0)*s+'px',height:(by1-by0)*s+'px'}); },
-    ready(){ play(); },
+    ready(){ if(!reduce) gapless(); },   // the clip loads only after the picture is on screen
     frame(){}
   };
 },
@@ -75,7 +102,7 @@ twinkle(){
   function build(){ // a soft piece of the wall next to each bulb, used to dim it
     const R=C.br;
     patches=B.map(b=>{ const c=document.createElement('canvas'); c.width=c.height=R*2; const x=c.getContext('2d');
-      x.drawImage(img,b.x+b.dx-R,b.y+b.dy-R,R*2,R*2,0,0,R*2,R*2);
+      put(x,b.x+b.dx-R,b.y+b.dy-R,R*2,R*2,0,0,R*2,R*2);
       x.globalCompositeOperation='destination-in';
       const gr=x.createRadialGradient(R,R,0,R,R,R); gr.addColorStop(0,'rgba(0,0,0,1)'); gr.addColorStop(.55,'rgba(0,0,0,.85)'); gr.addColorStop(1,'rgba(0,0,0,0)');
       x.fillStyle=gr; x.fillRect(0,0,R*2,R*2); return c; });
@@ -257,7 +284,7 @@ fire(){
       const up=1-(y/fh); // 1 at the top, 0 at the base
       const sy=F.y2-(F.y2-(F.y1+y))/stretch;
       const dx=(Math.sin(t*7.3+y*.11)*2.2+Math.sin(t*12.1+y*.23)*1.1)*up*up*F.amp;
-      ox2.drawImage(img,F.x1,sy,fw,strip/stretch,dx*s,y*s,pw,strip*s+1);
+      put(ox2,F.x1,sy,fw,strip/stretch,dx*s,y*s,pw,strip*s+1);
     }
     ox2.globalCompositeOperation='destination-in';
     const gr=ox2.createRadialGradient(pw/2,ph*.62,0,pw/2,ph*.62,Math.max(pw,ph)*.55);
@@ -281,7 +308,7 @@ candle(){
   const off=document.createElement('canvas'), o=off.getContext('2d');
   function cover(){ // soften the photographed flame so the drawn one replaces it
     const R=K.cover, c=off; c.width=c.height=R*2;
-    o.clearRect(0,0,R*2,R*2); o.filter='blur(9px)'; o.drawImage(img,K.x+K.patchDx-R,K.cy-R,R*2,R*2,0,0,R*2,R*2); o.filter='none';
+    o.clearRect(0,0,R*2,R*2); o.filter='blur(9px)'; put(o,K.x+K.patchDx-R,K.cy-R,R*2,R*2,0,0,R*2,R*2); o.filter='none';
     o.globalCompositeOperation='destination-in';
     const gr=o.createRadialGradient(R,R,0,R,R,R); gr.addColorStop(0,'rgba(0,0,0,1)'); gr.addColorStop(.55,'rgba(0,0,0,.95)'); gr.addColorStop(1,'rgba(0,0,0,0)');
     o.fillStyle=gr; o.fillRect(0,0,R*2,R*2); o.globalCompositeOperation='source-over';
