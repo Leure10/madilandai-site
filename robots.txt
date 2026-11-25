@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://madilandai.com/sitemap.xml

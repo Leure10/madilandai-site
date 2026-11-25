@@ -1,0 +1,15 @@
+{
+ "name": "Madiland AI Books",
+ "short_name": "Madiland",
+ "start_url": "/",
+ "display": "browser",
+ "background_color": "#E3E5E3",
+ "theme_color": "#16303F",
+ "icons": [
+  {
+   "src": "/img/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  }
+ ]
+}

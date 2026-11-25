@@ -1,0 +1,22 @@
+/* footer: the letter about new books, the categories, the small print */
+.foot .legal{flex-basis:100%;gap:8px 18px}
+.foot nav a{padding:6px 0}
+.foot a:focus-visible{outline-color:var(--glow)}
+.news{flex-basis:100%;max-width:760px;margin:0 0 34px;color:#EEF2F1;font-size:16px}
+.news h2{font:300 clamp(26px,2.4vw,34px)/1.1 'Newsreader',Georgia,serif;letter-spacing:-.02em;margin:0}
+.news p{margin:10px 0 0;color:rgba(236,241,240,.8);line-height:1.55;max-width:60ch}
+.nrow{display:flex;gap:10px;margin:20px 0 0}.nrow input{flex:1;min-width:0;font:400 17px 'Familjen Grotesk',system-ui,sans-serif;color:#1E272B;background:#fff;border:0;border-radius:12px;padding:15px 16px}
+.news .btn{border:0;cursor:pointer;font-family:inherit}
+.news fieldset{border:0;margin:20px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}.news legend{padding:0;margin:0 0 10px;font-size:15px;color:rgba(236,241,240,.8)}
+.news fieldset label{position:relative;padding:11px 14px;border-radius:10px;box-shadow:inset 0 0 0 1px rgba(236,241,240,.3);cursor:pointer}
+.news fieldset input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.news fieldset label:has(:checked){background:#EEF2F1;color:#16303F;box-shadow:none}.news fieldset label:has(:focus-visible){outline:2px solid var(--glow);outline-offset:2px}
+.news .ok{display:flex;gap:12px;margin:20px 0 0;font-size:15px;line-height:1.5;color:rgba(236,241,240,.86)}.news .ok input{flex:none;width:22px;height:22px;margin:1px 0 0;accent-color:var(--teal)}
+.news a{text-decoration:underline;text-underline-offset:3px}.news .trap{position:absolute;left:-9999px}.news .nmsg:empty{display:none}.news .nmsg{color:#fff}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@media (max-width:640px){.nrow{flex-direction:column}.news .btn{justify-content:center}}
+.foot{flex-wrap:wrap;font-size:14px!important;color:rgba(236,241,240,.74)!important}
+.foot nav{display:flex;gap:4px 18px;flex-wrap:wrap}
+.foot nav a:hover{color:#fff}
+@media (max-width:900px){.foot nav a{padding:11px 0}.foot{padding-bottom:140px!important}}
+.skip{position:absolute;left:-9999px;z-index:60;background:#fff;color:#10273A;padding:12px 18px;border-radius:0 0 12px 0}.skip:focus{left:0;top:0}
