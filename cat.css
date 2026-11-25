@@ -102,7 +102,7 @@ h1 em{font-style:italic;font-weight:300}
 
 @media (max-width:900px){
   .hero{height:auto;min-height:0}
-  .stage{position:relative;left:0;height:calc(100vw / var(--ar,1.6));min-height:0}
+  .stage{position:relative;left:0;height:calc(100vw / 1.7908);min-height:0}
   .stage::before,.hero .gut{display:none}
   .brand img{height:64px}
   .rb:not(.saffron){display:none}
@@ -200,3 +200,12 @@ h1 em{font-style:italic;font-weight:300}
 /* 25 nov: desktop, the corner where Madi stands stays free of covers and titles */
 @media (min-width:901px){.main-cat .books{padding-right:max(4vw,162px)}}
 @media (max-width:900px){.crumb a{display:inline-block;padding:5px 3px;margin:-5px -3px;min-height:26px}}
+
+/* 25 nov: Planners has two shelves: dated 2027 and undated */
+.sec{max-width:1240px;margin:52px auto 0;scroll-margin-top:24px}
+.sec+.sec{margin-top:84px;padding-top:56px;border-top:1px solid rgba(255,255,255,.13)}
+.sec[hidden]{display:none}.sec .grid{margin-top:34px}
+.sec h3{margin:0;font:300 clamp(28px,3vw,40px)/1.1 'Newsreader',Georgia,serif;color:#fff}
+.sec>p{margin:8px 0 0;font-size:15px;color:rgba(236,241,240,.75);max-width:60ch}
+.ctas.two .btn{flex:none}
+@media (max-width:900px){.sec{margin-top:36px}.sec+.sec{margin-top:60px;padding-top:40px}.tabs button{white-space:nowrap;padding:12px 13px}}

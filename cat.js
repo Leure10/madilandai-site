@@ -23,7 +23,7 @@ function layout(){
   for(const [c,g] of [[cn,gn],[cs,gs]]){ c.width=Math.round(W*DPR); c.height=Math.round(H*DPR); g.setTransform(DPR,0,0,DPR,0,0); }
   s=Math.max(W/C.w,H/C.h);
   const mob=W<700 && H>W*.8, ax=mob?(C.mx??.5):(C.ax??.55);
-  ox=clamp(W*ax-C.fxp*s, W-C.w*s, 0); oy=clamp(H*.5-C.fy*s, H-C.h*s, 0);
+  ox=clamp(W*ax-C.fxp*s, W-C.w*s, 0); oy=clamp(H*.5-(innerWidth<=900?(C.mfy??C.fy):C.fy)*s, H-C.h*s, 0);
   if(SRC) sceneEl.style.backgroundImage=`url(${SRC})`;
   sceneEl.style.backgroundSize=`${C.w*s}px ${C.h*s}px`;
   sceneEl.style.backgroundPosition=`${ox}px ${oy}px`;
@@ -395,5 +395,5 @@ document.addEventListener('visibilitychange',start);
 /* filters */
 const tabs=[...document.querySelectorAll('.tabs button')], cards=[...document.querySelectorAll('.bk')];
 tabs.forEach(b=>b.addEventListener('click',()=>{ tabs.forEach(x=>x.setAttribute('aria-pressed',x===b)); const g=b.dataset.g;
-  cards.forEach(c=>c.hidden=!(g==='all'||c.dataset.g===g)); }));
+  cards.forEach(c=>c.hidden=!(g==='all'||c.dataset.g===g)); document.querySelectorAll('.sec').forEach(c=>c.hidden=!(g==='all'||c.dataset.g===g)); }));
 })();

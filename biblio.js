@@ -123,7 +123,9 @@ const css=`
 .lib .back:hover{background:#2f1a0c}.lib .back[hidden]{display:none}
 @media (max-width:700px){.lib .desk{padding:16px 16px calc(18px + env(safe-area-inset-bottom));gap:13px}.lib .win{border-radius:0}.lib .sl{font-size:16px}.lib .x{width:48px;height:48px;right:10px;top:10px}.lib .back{left:10px;top:10px}
  .lib .three{grid-template-columns:1fr}.lib .say{font-size:22px}.lib .ans{flex:1;align-content:flex-start}
- .lib .three .sl{flex-direction:row;align-items:center;justify-content:flex-start;gap:15px;padding:9px 16px 9px 30px}.lib .row{display:grid;grid-template-columns:1fr 1fr;gap:9px}.lib .row .sl{justify-content:center;text-align:center;padding:8px;font-size:15px}.lib .row .sl:nth-child(2){grid-column:1/-1;order:3}.lib .three .sl img{display:block;flex:none;height:min(78px,9.2vh);width:auto;border-radius:2px;box-shadow:0 2px 7px rgba(42,23,11,.45)}}
+ .lib .ans:not(:has(.three)){flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:10px;padding-bottom:14px}.lib .ans>.sl{flex:1 0 46px;max-height:124px;font-size:18px;padding-left:40px;background:radial-gradient(circle at 20px 50%,#2a170b 0 4.5px,transparent 5.1px),linear-gradient(180deg,#F8EFDD,#E9DABD)}.lib .ans>.sl.quiet{background:none;padding-left:18px;flex:0 0 46px}
+ .lib .three .sl{flex-direction:row;align-items:center;justify-content:flex-start;gap:15px;padding:9px 16px 9px 30px}.lib .row{display:grid;grid-template-columns:1fr 1fr;gap:9px}.lib .row .sl{justify-content:center;text-align:center;padding:8px;font-size:15px}.lib .row .sl:nth-child(2){grid-column:1/-1;order:3}.lib .three .sl img{display:block;flex:none;height:min(62px,8vh);width:auto;border-radius:2px;box-shadow:0 2px 7px rgba(42,23,11,.45)}}
+@media (max-width:700px) and (max-height:700px){.lib .desk{gap:9px;padding-top:12px;padding-bottom:calc(24px + env(safe-area-inset-bottom))}.lib .say{font-size:20px}.lib .ans:not(:has(.three)){gap:6px;padding-bottom:4px}.lib .ans>.sl{flex-basis:44px;min-height:44px;padding-top:6px;padding-bottom:6px}.lib .ans>.sl.quiet{flex-basis:44px}.lib .three{gap:7px}.lib .three .sl{padding-top:5px;padding-bottom:5px}.lib .three .sl img{height:44px}.lib .row{gap:7px}.lib .row .sl{min-height:44px;padding:5px}}
 @media (max-height:760px) and (min-width:701px){.lib .desk{padding:14px 26px 14px;gap:10px}}
 @media (max-height:560px) and (min-width:701px){.lib .win{flex-direction:row}.lib .desk{padding:16px 16px 28px;gap:9px}.lib .say{font-size:20px;padding-right:56px}.lib .ans{flex:1;align-content:flex-start}.lib .sl{min-height:44px;padding-top:7px;padding-bottom:7px}
  .lib .three{grid-template-columns:1fr;gap:8px}.lib .three .sl{flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;padding:6px 12px 6px 28px;font-size:15px}.lib .three .sl img{display:block;flex:none;height:58px;width:auto;border-radius:2px;box-shadow:0 2px 6px rgba(42,23,11,.45)}}
@@ -149,7 +151,7 @@ function build(){
   [...vids,vs].forEach(v=>v.addEventListener('contextmenu',e=>e.preventDefault()));
 }
 function rect(){ const W=innerWidth,H=innerHeight; 
-  if(W<=700){ return {l:0,t:0,w:W,h:H,f:Math.round(Math.min(W*.84,H*.4))}; }
+  if(W<=700){ return {l:0,t:0,w:W,h:H,f:Math.round(H<740?Math.min(W*.84,H*.4):Math.min(W*1.1,H*.46))}; }
   if(H<=560){ const h=H-16,w=W-16; return {l:8,t:8,w,h,f:h,fw:Math.round(Math.min(h*16/9,w*.58))}; }
   let dk=H<760?232:W<1040?256:196, w=Math.round(Math.min(1280,W*.92,(H*.95-dk)*16/9)); if(dk===196&&w<1030){ dk=250; w=Math.round(Math.min(1280,W*.92,(H*.95-dk)*16/9)); } const f=Math.round(w*9/16), h=f+dk; return {l:Math.round((W-w)/2),t:Math.round((H-h)/2),w,h,f}; }
 function place(){ const r=rect(); Object.assign(win.style,{left:r.l+'px',top:r.t+'px',width:r.w+'px',height:r.h+'px'}); const fw=r.fw||r.w; film.style.height=r.f+'px'; film.style.width=r.fw?fw+'px':'';
