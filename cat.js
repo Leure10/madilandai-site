@@ -395,5 +395,5 @@ document.addEventListener('visibilitychange',start);
 /* filters */
 const tabs=[...document.querySelectorAll('.tabs button')], cards=[...document.querySelectorAll('.bk')];
 tabs.forEach(b=>b.addEventListener('click',()=>{ tabs.forEach(x=>x.setAttribute('aria-pressed',x===b)); const g=b.dataset.g;
-  cards.forEach(c=>c.hidden=!(g==='all'||c.dataset.g===g)); document.querySelectorAll('.sec').forEach(c=>c.hidden=!(g==='all'||c.dataset.g===g)); }));
+  cards.forEach(c=>c.hidden=!(g==='all'||(c.dataset.g||'').split(' ').includes(g))); document.querySelectorAll('.sec').forEach(c=>c.hidden=!(g==='all'||c.dataset.g===g)); }));
 })();
